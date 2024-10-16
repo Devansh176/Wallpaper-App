@@ -23,29 +23,55 @@ class _WallpaperState extends State<Wallpaper> {
   @override
   void initState() {
     super.initState();
+
     fetchApi();
   }
 
   fetchApi() async {
     page = Random().nextInt(100);
-    String url = 'https://api.pexels.com/v1/curated?per_page=100&page=$page';
+    String pexelsUrl = 'https://api.pexels.com/v1/curated?per_page=80&page=$page';
+    String unSplashUrl = 'https://api.unsplash.com/photos?per_page=80&page=$page';
 
     try {
-      final response = await http.get(
-          Uri.parse(url),
+      final pexelsResponse = await http.get(
+          Uri.parse(pexelsUrl),
           headers: {
             'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'
+          }
+      );
+
+      final unsplashResponse = await http.get(
+          Uri.parse(unSplashUrl),
+          headers: {
+            'Authorization' : 'Client-ID StGi4MHWQApE24YNTplYIq1mBRl-jhbFyoRSqvYEyso'
+          }
+      );
+
+      print('Pexels Response Status Code: ${pexelsResponse.statusCode}');
+      print('Unsplash Response Status Code: ${unsplashResponse.statusCode}');
+
+      if(pexelsResponse.statusCode == 200 && unsplashResponse.statusCode == 200){
+        Map pexelsResult = jsonDecode(pexelsResponse.body);
+        List unsplashResult = jsonDecode(unsplashResponse.body);
+
+        if (pexelsResult['photos'].isNotEmpty && unsplashResult.isNotEmpty) {
+          setState(() {
+            images.addAll(pexelsResult['photos']);
+            images.addAll(unsplashResult.map((img) => {
+              'src' : {
+                'tiny' : img['urls']['small'],
+                'large2x' : img['urls']['regular'],
+              }
+            }).toList());
+            print(unsplashResult);
           });
-      if(response.statusCode == 200){
-        Map result = jsonDecode(response.body);
-        setState(() {
-          images = result['photos'];
-        });
+        } else {
+          print('No images found in response: ${pexelsResponse.statusCode} or ${unsplashResponse.statusCode}');
+        }
       } else {
-        print('Failed to load images: ${response.statusCode}');
+        print('Failed to load images: ${pexelsResponse.statusCode} or ${unsplashResponse.statusCode}');
       }
-    }
-    catch (e) {
+    } catch (e) {
       print('Error fetching images: $e');
     }
   }
@@ -55,34 +81,49 @@ class _WallpaperState extends State<Wallpaper> {
       page++;
     });
 
-    String url;
-    if(currentQuery.isNotEmpty){
-      url = 'https://api.pexels.com/v1/search?query=$currentQuery&per_page=100&page='+page.toString();
+    String pexelsUrl;
+    String unsplashUrl;
+
+    if (currentQuery.isNotEmpty) {
+      pexelsUrl = 'https://api.pexels.com/v1/search?query=$currentQuery&per_page=50&page=$page';
+      unsplashUrl = 'https://api.unsplash.com/search/photos?query=$currentQuery&per_page=50&page=$page';
     } else {
-      url = 'https://api.pexels.com/v1/curated?per_page=100&page='+page.toString();
+      pexelsUrl = 'https://api.pexels.com/v1/curated?per_page=50&page=$page';
+      unsplashUrl = 'https://api.unsplash.com/photos?per_page=50&page=$page';
     }
 
-    try{
-      final response = await http.get(
-        Uri.parse(url),
-        headers : {'Authorization' : '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'}
+    try {
+      final pexelsResponse = await http.get(
+          Uri.parse(pexelsUrl),
+          headers: {'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'}
       );
-      if (response.statusCode == 200) {
-        Map result = jsonDecode(response.body);
+
+      final unsplashResponse = await http.get(
+          Uri.parse(unsplashUrl),
+          headers: {'Authorization': 'Client-ID StGi4MHWQApE24YNTplYIq1mBRl-jhbFyoRSqvYEyso'}
+      );
+
+      if (pexelsResponse.statusCode == 200 && unsplashResponse.statusCode == 200) {
+        Map pexelsResult = jsonDecode(pexelsResponse.body);
+        List unsplashResult = jsonDecode(unsplashResponse.body);
+
         setState(() {
-          if (currentQuery.isNotEmpty) {
-            images.addAll(result['photos']);
-          } else {
-            images.addAll(result['photos']);
-          }
+          images.addAll(pexelsResult['photos']);
+          images.addAll(unsplashResult.map((img) => {
+            'src': {
+              'tiny': img['urls']['small'],
+              'large2x': img['urls']['regular'],
+            }
+          }).toList());
         });
       } else {
-        print('Failed to load more images: ${response.statusCode}');
+        print('Failed to load more images: ${pexelsResponse.statusCode} or ${unsplashResponse.statusCode}');
       }
     } catch (e) {
       print('Error loading more images: $e');
     }
   }
+
 
   void _search(BuildContext context) async {
     String query = _searchController.text.trim();
@@ -102,12 +143,27 @@ class _WallpaperState extends State<Wallpaper> {
   }
 
   Future<List> _fetchSearchResults(String query) async {
-    String url = 'https://api.pexels.com/v1/search?query=$query&per_page=200';
-    final response = await http.get(Uri.parse(url),
-        headers: {'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'});
-    if (response.statusCode == 200) {
-      Map result = jsonDecode(response.body);
-      return result['photos'];
+    String pexelsUrl = 'https://api.pexels.com/v1/search?query=$query&per_page=100';
+    final unsplashUrl = "https://api.unsplash.com/search/photos?query=$query&per_page=100";
+
+    final pexelsResponse = await http.get(Uri.parse(pexelsUrl),
+      headers: {'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'}
+    );
+
+    final unsplashResponse = await http.get(Uri.parse(unsplashUrl),
+      headers: {'Authorization': 'Client-ID StGi4MHWQApE24YNTplYIq1mBRl-jhbFyoRSqvYEyso'}
+    );
+
+    if (pexelsResponse.statusCode == 200 && unsplashResponse.statusCode == 200) {
+      Map<String, dynamic> pexelsResult = jsonDecode(pexelsResponse.body);
+      Map<String, dynamic> unsplashResult = jsonDecode(unsplashResponse.body);
+
+      List pexelsPhotos = pexelsResult['photos'];
+      List unsplashPhotos = unsplashResult['results'];
+
+      List combinedPhotos = [...pexelsPhotos, ...unsplashPhotos];
+
+      return combinedPhotos;
     } else {
       throw Exception('Failed to load search results');
     }
@@ -182,14 +238,14 @@ class _WallpaperState extends State<Wallpaper> {
               right: padding * 0.05,
               child: Padding(
                 padding: EdgeInsets.all(padding,),
+
                 child: TextField(
                   cursorColor: Colors.teal[300],
                   style: GoogleFonts.farro(
                     color: Colors.teal[300],
                   ),
-                  onTap: () => _search(context),
-                  controller: _searchController,
                   onSubmitted: (query) => _search(context),
+                  controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search Wallpapers...',
                     hintStyle: GoogleFonts.farro(
@@ -214,6 +270,15 @@ class _WallpaperState extends State<Wallpaper> {
                     ),
                     filled: true,
                     fillColor: Colors.transparent.withOpacity(0.6,),
+
+                    suffixIcon: IconButton(
+                      color: Colors.teal[300],
+                      onPressed: () {
+                        _searchController.clear();
+                        FocusScope.of(context).unfocus();
+                      },
+                      icon: Icon(Icons.clear,),
+                    ),
                   ),
                 ),
               ),
@@ -244,74 +309,5 @@ class _WallpaperState extends State<Wallpaper> {
         ),
       ),
     );
-  }
-}
-
-class ImageSearchDelegate extends SearchDelegate<List> {
-  final _WallpaperState wallpaperState;
-  ImageSearchDelegate(this.wallpaperState);
-
-  @override
-  ThemeData appBarTheme(BuildContext context) {
-    return ThemeData(
-      appBarTheme: AppBarTheme(
-        toolbarTextStyle: GoogleFonts.farro(
-          color: Colors.black,
-        ),
-        backgroundColor: Colors.transparent.withOpacity(0.2,),
-        iconTheme: IconThemeData(
-          color: Colors.black,
-        ),
-        titleTextStyle: GoogleFonts.farro(
-          color: Colors.black,
-          fontSize: 22,
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        hintStyle: GoogleFonts.farro(
-          color: Colors.black,
-        ),
-        border: InputBorder.none,
-      ),
-    );
-  }
-
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      onPressed: () {},
-      icon: Icon(Icons.arrow_back,),
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return Container(
-    );
-  }
-
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return Container(
-    );
-  }
-
-  Future<List> _fetchSearchResults(String query) async {
-    String url = 'https://api.pexels.com/v1/search?query=$query&per_page=200';
-    final response = await http.get(Uri.parse(url),
-        headers: {'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'});
-    if (response.statusCode == 200) {
-      Map result = jsonDecode(response.body);
-      return result['photos'];
-    } else {
-      throw Exception('Failed to load search results');
-    }
   }
 }

@@ -30,9 +30,12 @@ class _ImageScreenState extends State<ImageScreen> {
     final PaletteGenerator generator = await PaletteGenerator.fromImageProvider(
       NetworkImage(widget.imageUrl),
     );
-    setState(() {
-      dominantColor = generator.dominantColor?.color ?? Colors.tealAccent[400];
-    });
+    if(mounted) {
+      setState(() {
+        dominantColor =
+            generator.dominantColor?.color ?? Colors.tealAccent[400];
+      });
+    }
   }
 
   Future<void> setWallpaper() async {
@@ -41,7 +44,32 @@ class _ImageScreenState extends State<ImageScreen> {
       var file = await DefaultCacheManager().getSingleFile(widget.imageUrl);
       bool result = await WallpaperManager.setWallpaperFromFile(
           file.path, location);
-    } on PlatformException{}
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: dominantColor,
+          content: Text('HomeScreen set',
+            style: GoogleFonts.farro(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: dominantColor,
+          content: Text('Failed to set',
+            style: GoogleFonts.farro(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> setLockScreen() async {
@@ -50,7 +78,32 @@ class _ImageScreenState extends State<ImageScreen> {
       var file = await DefaultCacheManager().getSingleFile(widget.imageUrl);
       bool result = await WallpaperManager.setWallpaperFromFile(
           file.path, location);
-    } on PlatformException{}
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: dominantColor,
+          content: Text('LockScreen set',
+            style: GoogleFonts.farro(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: dominantColor,
+          content: Text('Failed to set',
+            style: GoogleFonts.farro(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> setBoth() async {
@@ -59,7 +112,30 @@ class _ImageScreenState extends State<ImageScreen> {
       var file = await DefaultCacheManager().getSingleFile(widget.imageUrl);
       bool result = await WallpaperManager.setWallpaperFromFile(
           file.path, location);
-    } on Exception{}
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: dominantColor,
+          content: Text('Both Screen set',
+            style: GoogleFonts.farro(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to set',
+            style: GoogleFonts.farro(
+              color: Colors.white,
+              fontSize: 20,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> saveToGallery() async {
@@ -68,11 +144,11 @@ class _ImageScreenState extends State<ImageScreen> {
       await ImageGallerySaver.saveFile(file.path);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.teal,
+          backgroundColor: dominantColor,
           content: Text('Saved to Gallery',
-            style: GoogleFonts.aclonica(
+            style: GoogleFonts.farro(
               fontSize: 20,
-              color: Colors.black,
+              color: Colors.white,
             ),
           ),
         ),
@@ -80,11 +156,11 @@ class _ImageScreenState extends State<ImageScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.black,
+          backgroundColor: dominantColor,
           content: Text('Failed to save: $e',
             style: GoogleFonts.aclonica(
               fontSize: 10,
-              color: Colors.black,
+              color: Colors.white,
             ),
           ),
         ),
@@ -99,6 +175,15 @@ class _ImageScreenState extends State<ImageScreen> {
     final height = screenSize.height;
     final padding = width * 0.05;
     final fontSize = width * 0.05;
+
+    if(dominantColor == null){
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.teal,),
+        ),
+      );
+    }
 
     Color textColor = (dominantColor != null && dominantColor!.computeLuminance() < 0.5)
         ? Colors.white
@@ -188,7 +273,18 @@ class _ImageScreenState extends State<ImageScreen> {
               child: TextButton(
                 onPressed: (){
                   setWallpaper();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Wallpaper set',
+                        style: GoogleFonts.farro(
+                          color: dominantColor,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  );
                 },
+
                 style: ButtonStyle(
                   backgroundColor: WidgetStateProperty.all(textColor,),
                 ),
