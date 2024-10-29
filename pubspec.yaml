@@ -43,6 +43,7 @@ dependencies:
   saver_gallery: ^3.0.6
   palette_generator: ^0.3.3+4
   material: ^1.0.0+2
+  chips_choice: ^3.0.1
 
 
 
