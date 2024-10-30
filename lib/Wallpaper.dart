@@ -619,5 +619,4 @@ class _WallpaperState extends State<Wallpaper> {
       ),
     );
   }
-
 }

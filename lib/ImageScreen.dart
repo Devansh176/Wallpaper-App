@@ -5,7 +5,7 @@ import 'package:flutter_wallpaper_manager/flutter_wallpaper_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:palette_generator/palette_generator.dart';
-
+import 'package:share_plus/share_plus.dart';
 
 
 class ImageScreen extends StatefulWidget {
@@ -168,13 +168,31 @@ class _ImageScreenState extends State<ImageScreen> {
     }
   }
 
+  Future<void> shareImage() async {
+    try {
+      var file = await DefaultCacheManager().getSingleFile(widget.imageUrl);
+      final XFile xFile = XFile(file.path);
+      Share.shareXFiles([xFile], text: 'Check out this amazing wallpaper from Wallviz !!');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to share : $e',
+            style: GoogleFonts.aclonica(
+              fontSize: 10,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final width = screenSize.width;
     final height = screenSize.height;
     final padding = width * 0.05;
-    final fontSize = width * 0.05;
 
     if(dominantColor == null){
       return Scaffold(
@@ -185,7 +203,7 @@ class _ImageScreenState extends State<ImageScreen> {
       );
     }
 
-    Color textColor = (dominantColor != null && dominantColor!.computeLuminance() < 0.5)
+    Color toggleColor = (dominantColor != null && dominantColor!.computeLuminance() < 0.5)
         ? Colors.white
         : Colors.black;
 
@@ -198,7 +216,7 @@ class _ImageScreenState extends State<ImageScreen> {
             Navigator.pop(context);
           },
           icon: Icon(Icons.arrow_back_ios_outlined,
-            color: textColor,
+            color: toggleColor,
             size: 27,
           ),
         ),
@@ -206,9 +224,9 @@ class _ImageScreenState extends State<ImageScreen> {
           Padding(
             padding: EdgeInsets.only(right: padding * 0.25,),
             child: PopupMenuButton(
-              iconColor: textColor,
+              iconColor: toggleColor,
               iconSize: 30,
-              color: textColor,
+              color: toggleColor,
               itemBuilder: (BuildContext context){
                 return [
                   PopupMenuItem<String>(
@@ -263,38 +281,49 @@ class _ImageScreenState extends State<ImageScreen> {
           Expanded(
             child: Image.network(widget.imageUrl),
           ),
-          Container(
-            height: height * 0.1,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: dominantColor,
-            ),
-            child: Center(
-              child: TextButton(
-                onPressed: (){
-                  setWallpaper();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Wallpaper set',
-                        style: GoogleFonts.farro(
-                          color: dominantColor,
-                          fontSize: 20,
-                        ),
+          Padding(
+            padding: EdgeInsets.only(bottom: height * 0.03,),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  height: height * 0.16,
+                  width: width * 0.16,
+                  decoration: BoxDecoration(
+                    color: toggleColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: IconButton(
+                      onPressed: saveToGallery,
+                      icon: Icon(
+                        Icons.download,
+                        color: dominantColor,
+                        size: width * 0.09,
                       ),
                     ),
-                  );
-                },
-
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(textColor,),
-                ),
-                child: Text('Set Wallpaper',
-                  style: GoogleFonts.aclonica(
-                    color: dominantColor,
-                    fontSize: fontSize * 1.4,
                   ),
                 ),
-              ),
+                SizedBox(width: width * 0.05,),
+                Container(
+                  height: height * 0.16,
+                  width: width * 0.16,
+                  decoration: BoxDecoration(
+                    color: toggleColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: IconButton(
+                      onPressed: shareImage,
+                      icon: Icon(
+                        Icons.share,
+                        color: dominantColor,
+                        size: width * 0.09,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
