@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallviz/ImageScreen.dart';
-import 'package:chips_choice/chips_choice.dart';
 
 
 class Wallpaper extends StatefulWidget {
@@ -166,13 +165,14 @@ class _WallpaperState extends State<Wallpaper> {
   }
 
   void fetchApi() async {
+    int randomPageNo = Random().nextInt(100) + 1;
     String pexelsUrl = currentQuery.isNotEmpty
-        ? 'https://api.pexels.com/v1/search?query=$currentQuery&per_page=50&page=1'
-        : 'https://api.pexels.com/v1/curated?per_page=50&page=1';
+        ? 'https://api.pexels.com/v1/search?query=$currentQuery&per_page=50&page=$randomPageNo'
+        : 'https://api.pexels.com/v1/curated?per_page=50&page=$randomPageNo';
 
     String unsplashUrl = currentQuery.isNotEmpty
-        ? 'https://api.unsplash.com/search/photos?query=$currentQuery&per_page=50&page=1'
-        : 'https://api.unsplash.com/photos?per_page=50&page=1';
+        ? 'https://api.unsplash.com/search/photos?query=$currentQuery&per_page=50&page=$randomPageNo'
+        : 'https://api.unsplash.com/photos?per_page=50&page=$randomPageNo';
 
     try {
       final pexelsResponse = await http.get(
@@ -211,8 +211,11 @@ class _WallpaperState extends State<Wallpaper> {
         print("Fetched Pexels images count: ${filteredPexelsPhotos.length}");
         print("Fetched Unsplash images count: ${filteredUnsplashPhotos.length}");
 
+        List combinedImages = filteredPexelsPhotos + filteredUnsplashPhotos;
+        combinedImages.shuffle(Random());
+
         setState(() {
-          images = filteredPexelsPhotos + filteredUnsplashPhotos;
+          images = combinedImages;
         });
       } else {
         print('Failed to fetch images from APIs');
@@ -251,13 +254,15 @@ class _WallpaperState extends State<Wallpaper> {
       page++;
     });
 
+    int randomPageNo = Random().nextInt(100) + 1;
+
     String pexelsUrl = currentQuery.isNotEmpty
-        ? 'https://api.pexels.com/v1/search?query=$currentQuery&per_page=50&page=$page'
-        : 'https://api.pexels.com/v1/curated?per_page=50&page=$page';
+        ? 'https://api.pexels.com/v1/search?query=$currentQuery&per_page=50&page=$randomPageNo'
+        : 'https://api.pexels.com/v1/curated?per_page=50&page=$randomPageNo';
 
     String unsplashUrl = currentQuery.isNotEmpty
-        ? 'https://api.unsplash.com/search/photos?query=$currentQuery&per_page=50&page=$page'
-        : 'https://api.unsplash.com/photos?per_page=50&page=$page';
+        ? 'https://api.unsplash.com/search/photos?query=$currentQuery&per_page=50&page=$randomPageNo'
+        : 'https://api.unsplash.com/photos?per_page=50&page=$randomPageNo';
 
     try {
       final pexelsResponse = await http.get(
@@ -271,14 +276,11 @@ class _WallpaperState extends State<Wallpaper> {
       );
 
       if (pexelsResponse.statusCode == 200 && unsplashResponse.statusCode == 200) {
-        // Process Pexels response
         Map<String, dynamic> pexelsResult = jsonDecode(pexelsResponse.body);
         List<dynamic> pexelsPhotos = pexelsResult['photos'] ?? [];
 
-        // Filter only valid Pexels photos
         List filteredPexelsPhotos = pexelsPhotos.where((img) => img['src'] != null && img['src']['tiny'] != null && img['src']['large2x'] != null).toList();
 
-        // Process Unsplash response
         dynamic unsplashResult = jsonDecode(unsplashResponse.body);
         List<dynamic> unsplashPhotos;
 
@@ -290,7 +292,6 @@ class _WallpaperState extends State<Wallpaper> {
           unsplashPhotos = [];
         }
 
-        // Filter only valid Unsplash photos
         List filteredUnsplashPhotos = unsplashPhotos.where((img) =>
         img['urls'] != null && img['urls']['small'] != null && img['urls']['regular'] != null
         ).map((img) => {
@@ -300,10 +301,11 @@ class _WallpaperState extends State<Wallpaper> {
           }
         }).toList();
 
-        // Add the fetched photos to the existing images list
+        List combinedImages = filteredPexelsPhotos + filteredUnsplashPhotos;
+        combinedImages.shuffle(Random());
+
         setState(() {
-          images.addAll(filteredPexelsPhotos);
-          images.addAll(filteredUnsplashPhotos);
+          images.addAll(combinedImages);
           _isLoadingMore = false;
         });
       } else {
@@ -484,8 +486,8 @@ class _WallpaperState extends State<Wallpaper> {
 
                   if (imageUrl == null) {
                     return Container(
-                      width: double.infinity, // Make sure it takes up the space allocated by the grid item
-                      height: 150, // Set a height similar to the image size in the grid
+                      width: double.infinity,
+                      height: 150,
                       color: Colors.grey[200],
                     );
                   }
@@ -496,7 +498,7 @@ class _WallpaperState extends State<Wallpaper> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => ImageScreen(
-                            imageUrl: images[index]['src']['large2x'],
+                            imageUrls: [images[index]['src']['large2x']],
                           ),
                         ),
                       );
@@ -507,7 +509,7 @@ class _WallpaperState extends State<Wallpaper> {
                         imageUrl,
                         fit: BoxFit.cover,
                         width: double.infinity,
-                        height: 150, // Keep height consistent with null-image containers
+                        height: 150,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             width: double.infinity,

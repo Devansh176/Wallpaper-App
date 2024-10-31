@@ -43,8 +43,9 @@ dependencies:
   saver_gallery: ^3.0.6
   palette_generator: ^0.3.3+4
   material: ^1.0.0+2
-  chips_choice: ^3.0.1
   share_plus: ^10.1.1
+  permission_handler: ^11.3.1
+  carousel_slider: ^5.0.0
 
 
 
