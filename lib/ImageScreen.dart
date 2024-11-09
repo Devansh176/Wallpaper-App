@@ -50,27 +50,40 @@ class _ImageScreenState extends State<ImageScreen> {
     }
   }
 
-  Future<void> _fetchRelatedImages(String imageUrl) async {
+  List _filterUniqueImages(List images) {
+    final seenUrls = <String>{};
+    return images.where((img) {
+      final largeUrl = img['src']['large2x'];
+      if(seenUrls.contains(largeUrl)) {
+        return false;
+      } else {
+        seenUrls.add(largeUrl);
+        return true;
+      }
+    }).toList();
+  }
+
+  Future<void> _fetchRelatedImages(String keyword) async {
     setState(() {
       isLoadingImages = true;
     });
 
-    String keywords = extractKeywordsFromImageUrl(imageUrl);
-    print("Extracted Keywords: $keywords");
-
-    String unsplashUrl = 'https://api.unsplash.com/search/photos?page=1&query=${Uri.encodeComponent(keywords)}&client_id=StGi4MHWQApE24YNTplYIq1mBRl-jhbFyoRSqvYEyso';
-    String pexelsUrl = 'https://api.pexels.com/v1/search?query=${Uri.encodeComponent(keywords)}';
+    String unsplashUrl = 'https://api.unsplash.com/search/photos?query=$keyword&per_page=15';
+    String pexelsUrl = 'https://api.pexels.com/v1/search?query=$keyword&per_page=15';
 
     try {
-      final pexelsResponse = await http.get(
-        Uri.parse(pexelsUrl),
+      final unsplashResponse = await http.get(
+        Uri.parse(unsplashUrl),
         headers: {
-          'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM'
+          'Authorization': 'Client-ID StGi4MHWQApE24YNTplYIq1mBRl-jhbFyoRSqvYEyso',
         },
       );
 
-      final unsplashResponse = await http.get(
-        Uri.parse(unsplashUrl),
+      final pexelsResponse = await http.get(
+        Uri.parse(pexelsUrl),
+        headers: {
+          'Authorization': '4qZ2txUCt5XrsjKk7YrkDanR5BvZwuyt5xR4zPW5kWL6LfkjxZapfsQM',
+        },
       );
 
       print("Pexels Response Status: ${pexelsResponse.statusCode}");
@@ -80,15 +93,17 @@ class _ImageScreenState extends State<ImageScreen> {
         Map<String, dynamic> pexelsResult = jsonDecode(pexelsResponse.body);
         List<dynamic> pexelsPhotos = pexelsResult['photos'] ?? [];
 
-        dynamic unsplashResult = jsonDecode(unsplashResponse.body);
-        List<dynamic> unsplashPhotos = (unsplashResult is List ? unsplashResult : unsplashResult['results'] ?? []) as List;
+        Map<String, dynamic> unsplashResult = jsonDecode(unsplashResponse.body);
+        List<dynamic> unsplashPhotos = unsplashResult['results'] ?? [];
 
         List filteredPexelsPhotos = pexelsPhotos.where((img) =>
-        img['src'] != null && img['src']['tiny'] != null &&
+        img['src'] != null &&
+            img['src']['tiny'] != null &&
             img['src']['large2x'] != null).toList();
 
         List filteredUnsplashPhotos = unsplashPhotos.where((img) =>
-        img['urls'] != null && img['urls']['small'] != null &&
+        img['urls'] != null &&
+            img['urls']['small'] != null &&
             img['urls']['regular'] != null).map((img) => {
           'src': {
             'tiny': img['urls']['small'],
@@ -96,7 +111,7 @@ class _ImageScreenState extends State<ImageScreen> {
           }
         }).toList();
 
-        List combinedImages = filteredPexelsPhotos + filteredUnsplashPhotos;
+        List combinedImages = _filterUniqueImages([...filteredPexelsPhotos, ...filteredUnsplashPhotos]);
         combinedImages.shuffle(Random());
 
         if (mounted) {
@@ -118,13 +133,6 @@ class _ImageScreenState extends State<ImageScreen> {
       }
     }
   }
-
-
-  String extractKeywordsFromImageUrl(String imageUrl) {
-    List<String> segments = imageUrl.split(RegExp(r'[/\-]'));
-    return segments.where((segment) => segment.isNotEmpty).take(3).join(' ');
-  }
-
 
 
   Future<void> setWallpaper() async {
@@ -228,6 +236,15 @@ class _ImageScreenState extends State<ImageScreen> {
   }
 
   Future<void> saveToGallery() async {
+    if(widget.imageUrls.isEmpty || currentIndex < 0 || currentIndex >= widget.imageUrls.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No image available to save',),
+        ),
+      );
+      return;
+    }
+
     try {
       var file = await DefaultCacheManager().getSingleFile(widget.imageUrls[currentIndex]);
       await ImageGallerySaver.saveFile(file.path);
@@ -258,6 +275,15 @@ class _ImageScreenState extends State<ImageScreen> {
   }
 
   Future<void> shareImage() async {
+    if(widget.imageUrls.isEmpty || currentIndex < 0 || currentIndex >= widget.imageUrls.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No image available to share',),
+        ),
+      );
+      return;
+    }
+
     try {
       var file = await DefaultCacheManager().getSingleFile(widget.imageUrls[currentIndex]);
       final XFile xFile = XFile(file.path);
@@ -371,7 +397,7 @@ class _ImageScreenState extends State<ImageScreen> {
         children: [
           Expanded(
             child: CarouselSlider.builder(
-              itemCount: isLoadingImages ? 1 : relatedImages.length + 1,
+              itemCount: widget.imageUrls.length,
               itemBuilder: (context, index, realIndex) {
                 if (isLoadingImages) {
                   return Center(
@@ -411,7 +437,9 @@ class _ImageScreenState extends State<ImageScreen> {
                     currentIndex = index;
                     if (index == 0) {
                       _getDominantColor(widget.imageUrls[currentIndex]);
-                      _fetchRelatedImages(widget.imageUrls[currentIndex]);
+                      if(relatedImages.isEmpty) {
+                        _fetchRelatedImages(widget.imageUrls[currentIndex]);
+                      }
                     }
                     else if (index > 0 && index <= relatedImages.length) {
                       int relatedIndex = index - 1;
@@ -424,52 +452,31 @@ class _ImageScreenState extends State<ImageScreen> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(bottom: height * 0.03,),
+            padding: EdgeInsets.only(bottom: screenSize.height * 0.03),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  height: height * 0.16,
-                  width: width * 0.16,
-                  decoration: BoxDecoration(
-                    color: toggleColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: IconButton(
-                      onPressed: saveToGallery,
-                      icon: Icon(
-                        Icons.download,
-                        color: dominantColor,
-                        size: width * 0.09,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: width * 0.05,),
-                Container(
-                  height: height * 0.16,
-                  width: width * 0.16,
-                  decoration: BoxDecoration(
-                    color: toggleColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: IconButton(
-                      onPressed: shareImage,
-                      icon: Icon(
-                        Icons.share,
-                        color: dominantColor,
-                        size: width * 0.09,
-                      ),
-                    ),
-                  ),
-                ),
+                _actionIcon(Icons.download, toggleColor, saveToGallery),
+                SizedBox(width: screenSize.width * 0.05),
+                _actionIcon(Icons.share, toggleColor, shareImage),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _actionIcon(IconData icon, Color color, VoidCallback onPressed) {
+    final screenSize = MediaQuery.of(context).size;
+    final width = screenSize.width;
+    final height = screenSize.height;
+
+    return Container(
+      height: height * 0.18,
+      width: width * 0.18,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: IconButton(icon: Icon(icon, color: dominantColor, size: width * 0.085,), onPressed: onPressed),
     );
   }
 }
