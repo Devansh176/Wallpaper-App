@@ -10,6 +10,8 @@ import 'package:palette_generator/palette_generator.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:http/http.dart' as http;
+import 'package:cached_network_image/cached_network_image.dart';
+
 
 class ImageScreen extends StatefulWidget {
   final List<String> imageUrls;
@@ -26,7 +28,7 @@ class _ImageScreenState extends State<ImageScreen> {
   int currentIndex = 0;
   List relatedImages = [];
   bool isLoadingImages = false;
-  Map<String, List<dynamic>> cachedRelatedImages = {}; // Cache for related images
+  Map<String, List<dynamic>> cachedRelatedImages = {};
 
   @override
   void initState() {
@@ -63,12 +65,17 @@ class _ImageScreenState extends State<ImageScreen> {
     }).toList();
   }
 
+  void onImageSelected(Map<String, dynamic> selectedImage) {
+    String query = selectedImage['metadata']?['tags']?.join(', ') ?? 'No tags available';
+    _fetchRelatedImages(query);
+  }
+
+
   Future<void> _fetchRelatedImages(String query) async {
     setState(() {
       isLoadingImages = true;
     });
 
-    // Check cache first
     if (cachedRelatedImages.containsKey(query)) {
       setState(() {
         relatedImages = cachedRelatedImages[query]!;
@@ -77,8 +84,8 @@ class _ImageScreenState extends State<ImageScreen> {
       return;
     }
 
-    String unsplashUrl = 'https://api.unsplash.com/search/photos?query=$query&per_page=15';
-    String pexelsUrl = 'https://api.pexels.com/v1/search?query=$query&per_page=15';
+    String unsplashUrl = 'https://api.unsplash.com/search/photos?query=$query&per_page=200';
+    String pexelsUrl = 'https://api.pexels.com/v1/search?query=$query&per_page=200';
 
     try {
       final unsplashResponse = await http.get(
@@ -114,10 +121,21 @@ class _ImageScreenState extends State<ImageScreen> {
           'src': {
             'tiny': img['urls']['small'],
             'large2x': img['urls']['regular'],
+          },
+          'metadata': {
+            'description': img['alt_description'] ?? query,
+            'tags': img['alt_description'] != null ? [img['alt_description']] : [],
           }
         }).toList();
 
-        List combinedImages = _filterUniqueImages([...filteredPexelsPhotos, ...filteredUnsplashPhotos]);
+        List pexelsWithTags = filteredPexelsPhotos.map((img) => {
+          'src': img['src'],
+          'metadata': {
+            'tags': img['tags'] ?? []
+          }
+        }).toList();
+
+        List combinedImages = _filterUniqueImages([...filteredPexelsPhotos, ...filteredUnsplashPhotos, ...pexelsWithTags]);
         combinedImages.shuffle(Random());
 
         // Cache related images
@@ -142,6 +160,9 @@ class _ImageScreenState extends State<ImageScreen> {
       }
     }
   }
+
+
+
 
   Future<void> setWallpaper() async {
     try {
@@ -180,7 +201,6 @@ class _ImageScreenState extends State<ImageScreen> {
   Future<void> setLockScreen() async {
     String? imageUrl;
 
-    // Determine if the current image is from main images or related images
     if (currentIndex < widget.imageUrls.length) {
       imageUrl = widget.imageUrls[currentIndex];
     } else {
@@ -235,7 +255,6 @@ class _ImageScreenState extends State<ImageScreen> {
   Future<void> setBoth() async {
     String? imageUrl;
 
-    // Determine if the current image is from main images or related images
     if (currentIndex < widget.imageUrls.length) {
       imageUrl = widget.imageUrls[currentIndex];
     } else {
@@ -288,7 +307,6 @@ class _ImageScreenState extends State<ImageScreen> {
   Future<void> saveToGallery() async {
     String? imageUrl;
 
-    // Determine if the current image is from main images or related images
     if (currentIndex < widget.imageUrls.length) {
       imageUrl = widget.imageUrls[currentIndex];
     } else {
@@ -298,7 +316,6 @@ class _ImageScreenState extends State<ImageScreen> {
       }
     }
 
-    // If no image URL is found, show a message and exit
     if (imageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -343,7 +360,6 @@ class _ImageScreenState extends State<ImageScreen> {
   Future<void> shareImage() async {
     String? imageUrl;
 
-    // Determine if the current image is from main images or related images
     if (currentIndex < widget.imageUrls.length) {
       imageUrl = widget.imageUrls[currentIndex];
     } else {
@@ -353,7 +369,6 @@ class _ImageScreenState extends State<ImageScreen> {
       }
     }
 
-    // If no image URL is found, show a message and exit
     if (imageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -482,16 +497,13 @@ class _ImageScreenState extends State<ImageScreen> {
               itemBuilder: (context, index, realIndex) {
                 String imageUrl;
                 if (index < widget.imageUrls.length) {
-                  // Main image
                   imageUrl = widget.imageUrls[index];
                 } else {
-                  // Related image
                   int relatedIndex = index - widget.imageUrls.length;
                   if (relatedImages.isNotEmpty && relatedIndex < relatedImages.length) {
                     imageUrl = relatedImages[relatedIndex]['src']['large2x'];
                   } else {
-                    // Fallback in case relatedImages is shorter than expected
-                    imageUrl = widget.imageUrls[0]; // Or any default image
+                    imageUrl = widget.imageUrls[0];
                   }
                 }
 
@@ -500,27 +512,26 @@ class _ImageScreenState extends State<ImageScreen> {
                     setState(() {
                       currentIndex = index;
                       _getDominantColor(imageUrl);
+
+                      if (index >= widget.imageUrls.length) {
+                        int relatedIndex = index - widget.imageUrls.length;
+                        if (relatedImages.isNotEmpty && relatedIndex < relatedImages.length) {
+                          String relatedQuery = relatedImages[relatedIndex]['metadata']?['description'] ?? 'default';
+                          _fetchRelatedImages(relatedQuery);
+                        }
+                      }
                     });
                   },
-                  child: Image.network(
-                    imageUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if(loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
-                              : null,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Text('Image not available'),
-                      );
-                    },
-                  )
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (context, url, error) => Center(
+                      child: Icon(Icons.error),
+                    ),
+                  ),
                 );
               },
               options: CarouselOptions(
@@ -532,21 +543,19 @@ class _ImageScreenState extends State<ImageScreen> {
                 onPageChanged: (index, reason) {
                   setState(() {
                     currentIndex = index;
-
                     if (index < widget.imageUrls.length) {
-                      // Main images
                       _getDominantColor(widget.imageUrls[index]);
+                      _fetchRelatedImages(widget.imageUrls[currentIndex]);
                     } else if (index < widget.imageUrls.length + relatedImages.length) {
-                      // Related images
                       int relatedIndex = index - widget.imageUrls.length;
+                      String relatedQuery = relatedImages[relatedIndex]['metadata']?['description'] ?? 'default';
                       _getDominantColor(relatedImages[relatedIndex]['src']['large2x']);
+                      _fetchRelatedImages(relatedQuery);
                     } else {
-                      // Out of range - prevent further errors
                       print('Index out of range: $index');
                     }
                   });
                 },
-
               ),
             ),
           ),
