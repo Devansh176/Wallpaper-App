@@ -10,6 +10,7 @@
 - 🔍 Keyword-based wallpaper search
 - 🧱 Explore categories like Nature, Abstract, Technology, and more
 - 📥 Wallpaper download support
+- 📜 **Pagination** for efficient data loading
 - 🎨 Clean and responsive UI optimized for mobile
 - ☁️ Lazy loading with smooth image grids
 
@@ -24,6 +25,7 @@
 | Unsplash API| Alternate data source (free images)    |
 | HTTP        | API calls and data fetching            |
 | CachedNetworkImage | Efficient image loading & caching |
+| Staggered Grid View | Grid layout with masonry effect|
 
 ---
 
@@ -58,7 +60,7 @@ lib/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/wallviz.git
+git clone https://github.com/Devansh176/Wallpaper-App.git
 cd wallviz
 
 # 2. Install dependencies
@@ -70,6 +72,16 @@ flutter pub get
 # 4. Run the app
 flutter run
 ```
+
+---
+
+## 🔁 Pagination
+
+Pagination is handled by tracking the current page number and loading more results as the user scrolls. Both Pexels and Unsplash support paginated API requests, making it efficient for loading large image collections.
+
+- **Implemented using ScrollController**
+- API calls increment page count on scroll end
+- Seamless loading without UI jank
 
 ---
 
@@ -98,7 +110,7 @@ dependencies:
 
 ## 📷 Screens (optional)
 
-> You can add app UI screenshots here if needed.
+You can add app UI screenshots here if needed.
 
 ---
 
