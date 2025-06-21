@@ -13,6 +13,8 @@
 - 📜 **Pagination** for efficient data loading
 - 🎨 Clean and responsive UI optimized for mobile
 - ☁️ Lazy loading with smooth image grids
+- 💡 Splash screen and smooth navigation
+
 
 ---
 
@@ -33,18 +35,19 @@
 
 ```
 lib/
-├── main.dart             # App entry point
-├── home_page.dart        # Main gallery UI
-├── search_page.dart      # Search functionality
-├── detail_page.dart      # Full-screen wallpaper view
-├── api/
-│   ├── pexels_api.dart
-│   └── unsplash_api.dart
-├── models/
-│   ├── photo_model.dart
-└── widgets/
-    ├── wallpaper_tile.dart
+├── main.dart               # App entry point
+├── SplashScreen.dart       # App splash/loading screen
+├── ImageScreen.dart        # Fullscreen wallpaper view
+├── Wallpaper.dart          # Home screen + image grid
+assets/                     # App icons, placeholder images
 ```
+
+Other platforms:  
+- `android/`, `ios/`, `web/`, `macos/`, `linux/`, `windows/` for cross-platform support  
+- `test/` for unit and widget tests
+
+---
+
 
 ---
 
@@ -106,13 +109,6 @@ dependencies:
 - **Unsplash:**  
   Create a developer account at [unsplash.com/developers](https://unsplash.com/developers), get the Access Key, and set it in `unsplash_api.dart`
 
----
-
-## 📷 Screens (optional)
-
-You can add app UI screenshots here if needed.
-
----
 
 ## 👨‍💻 Author
 
