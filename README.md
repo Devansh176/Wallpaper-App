@@ -88,16 +88,22 @@ Pagination is handled by tracking the current page number and loading more resul
 
 ---
 
-## 📦 Dependencies
+## 📦 Key Dependencies
 
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^0.13.5
-  cached_network_image: ^3.2.3
-  flutter_staggered_grid_view: ^0.6.2
-```
+| Package                  | Purpose                                                                 |
+|--------------------------|-------------------------------------------------------------------------|
+| `http`                   | To make REST API calls to Pexels and Unsplash                          |
+| `cached_network_image`   | Efficient image loading with memory and disk caching                   |
+| `flutter_cache_manager`  | Custom cache control for downloaded image assets                        |
+| `image_gallery_saver` / `saver_gallery` | Save downloaded wallpapers to the device gallery         |
+| `flutter_wallpaper_manager` | Set wallpaper directly from the app (Android only)                 |
+| `permission_handler`     | Manage runtime permissions (e.g., storage access for saving wallpapers) |
+| `palette_generator`      | Extract dominant color from wallpapers for theming/background effects   |
+| `carousel_slider`        | Image sliders and featured wallpaper carousels                          |
+| `share_plus`             | Enable sharing wallpapers directly from the app                         |
+| `flutter_launcher_icons`| Customize the app launcher icon                                         |
+| `flutter_native_splash` | Configure native splash screen for branding                             |
+
 
 ---
 
